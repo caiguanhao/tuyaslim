@@ -29,6 +29,7 @@ type (
 		ExpireTime   int    `json:"expire_time"`
 		RefreshToken string `json:"refresh_token"`
 		Uid          string `json:"uid"`
+		expiredAt    time.Time
 	}
 
 	Device struct {
@@ -100,6 +101,12 @@ func NewClient(id, secret string) *Client {
 
 // GetToken updates client.AccessToken.
 func (client *Client) GetToken(ctx context.Context) error {
+	defer func() {
+		if client.AccessToken != nil {
+			client.AccessToken.expiredAt = time.Now().Add(time.Duration(client.AccessToken.ExpireTime-5) * time.Second)
+		}
+	}()
+	client.AccessToken = nil
 	return client.Request(ctx, "GET", "/v1.0/token?grant_type=1", nil, &client.AccessToken)
 }
 
@@ -166,6 +173,12 @@ func (client *Client) Request(ctx context.Context, method, path string, body int
 	req, err = http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return
+	}
+
+	if req.URL.Path != "/v1.0/token" && (client.AccessToken == nil || client.AccessToken.expiredAt.Before(time.Now())) {
+		if err = client.GetToken(ctx); err != nil {
+			return
+		}
 	}
 
 	req.Header.Set("Signature-Headers", "access_token:client_id:content-type:sign_method:t")

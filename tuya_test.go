@@ -11,13 +11,6 @@ import (
 func TestGetDevices(t *testing.T) {
 	ctx := context.Background()
 	client := NewClient(os.Getenv("TUYA_CLIENT_ID"), os.Getenv("TUYA_CLIENT_SECRET"))
-	if err := client.GetToken(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if client.AccessToken == nil {
-		t.Fatal("access token should not be nil")
-	}
-	t.Log("received access token:", client.AccessToken.AccessToken)
 	devices, err := client.GetDevices(ctx)
 	if err != nil {
 		t.Fatal(err)
