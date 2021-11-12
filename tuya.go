@@ -32,6 +32,8 @@ type (
 		expiredAt    time.Time
 	}
 
+	Devices []Device
+
 	Device struct {
 		Id        string   `json:"id"`
 		Category  string   `json:"category"`
@@ -41,6 +43,11 @@ type (
 		Statuses  Statuses `json:"status"`
 		CreatedAt Time     `json:"create_time"`
 		UpdatedAt Time     `json:"update_time"`
+	}
+
+	DeviceIdAndStatus struct {
+		Id       string   `json:"id"`
+		Statuses Statuses `json:"status"`
 	}
 
 	Statuses map[string]interface{}
@@ -91,6 +98,13 @@ func (s *Statuses) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (devices Devices) Ids() (ids []string) {
+	for _, device := range devices {
+		ids = append(ids, device.Id)
+	}
+	return
+}
+
 // Create new client.
 func NewClient(id, secret string) *Client {
 	return &Client{
@@ -111,11 +125,11 @@ func (client *Client) GetToken(ctx context.Context) error {
 }
 
 // GetDevices returns all devices.
-func (client *Client) GetDevices(ctx context.Context) (devices []Device, err error) {
+func (client *Client) GetDevices(ctx context.Context) (devices Devices, err error) {
 	res := struct {
-		Devices    []Device `json:"devices"`
-		HasMore    bool     `json:"has_more"`
-		LastRowKey string   `json:"last_row_key"`
+		Devices    Devices `json:"devices"`
+		HasMore    bool    `json:"has_more"`
+		LastRowKey string  `json:"last_row_key"`
 	}{HasMore: true}
 	for res.HasMore == true {
 		url := "/v1.0/iot-01/associated-users/devices?size=50"
@@ -128,6 +142,13 @@ func (client *Client) GetDevices(ctx context.Context) (devices []Device, err err
 		}
 		devices = append(devices, res.Devices...)
 	}
+	return
+}
+
+// GetStatuses returns statuses of given devices. You should provide at least
+// one device and at most 20 devices.
+func (client *Client) GetStatuses(ctx context.Context, ids ...string) (devices []DeviceIdAndStatus, err error) {
+	err = client.Request(ctx, "GET", "/v1.0/iot-03/devices/status?device_ids="+strings.Join(ids, ","), nil, &devices)
 	return
 }
 

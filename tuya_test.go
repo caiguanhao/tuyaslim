@@ -19,6 +19,11 @@ func TestGetDevices(t *testing.T) {
 		t.Error("devices should not be empty")
 	}
 	t.Log("received", len(devices), "devices")
+	statuses, err := client.GetStatuses(ctx, devices.Ids()...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("device statuses:", statuses)
 	var onlineDevice *Device
 	var switchCmd string
 	for _, device := range devices {
